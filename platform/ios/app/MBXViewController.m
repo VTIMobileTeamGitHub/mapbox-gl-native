@@ -64,6 +64,7 @@ typedef NS_ENUM(NSInteger, MBXSettingsRuntimeStylingRows) {
     MBXSettingsRuntimeStylingStyleQuery,
     MBXSettingsRuntimeStylingFeatureSource,
     MBXSettingsRuntimeStylingPointCollection,
+    MBXSettingsRuntimeStylingCountryLabels,
 };
 
 typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
@@ -310,6 +311,7 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
                 @"Style Query For GeoJSON",
                 @"Style Feature",
                 @"Style Dynamic Point Collection",
+                @"Style Country Label Language"
             ]];
             break;
         case MBXSettingsMiscellaneous:
@@ -443,6 +445,9 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
                     break;
                 case MBXSettingsRuntimeStylingPointCollection:
                     [self styleDynamicPointCollection];
+                    break;
+                case MBXSettingsRuntimeStylingCountryLabels:
+                    [self styleCountryLabelLanguage];
                     break;
                 default:
                     NSAssert(NO, @"All runtime styling setting rows should be implemented");
@@ -804,7 +809,6 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
     });
 }
 
-
 - (void)styleQuery
 {
     CGRect queryRect = CGRectInset(self.mapView.bounds, 100, 200);
@@ -906,6 +910,14 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
     
     MGLCircleStyleLayer *layer = [[MGLCircleStyleLayer alloc] initWithIdentifier:@"wiggle-layer" source:source];
     [self.mapView.style addLayer:layer];
+}
+
+- (void)styleCountryLabelLanguage
+{
+    MGLSymbolStyleLayer *countryLayer = (MGLSymbolStyleLayer *)[self.mapView.style layerWithIdentifier:@"country-label-lg"];
+    MGLStyleConstantValue<NSString *> *countryLabel = (MGLStyleConstantValue<NSString *> *)countryLayer.textField;
+    NSString *language = [countryLabel.rawValue isEqual:@"{name_zh}"] ? @"{name_en}" : @"{name_zh}";
+    countryLayer.textField = [MGLStyleValue<NSString *> valueWithRawValue:language];
 }
 
 - (IBAction)startWorldTour
