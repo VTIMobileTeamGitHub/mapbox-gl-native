@@ -69,6 +69,12 @@ public:
                  createTexture(image.width, image.height, image.data.get(), unit) };
     }
 
+    template <typename Image>
+    void updateTexture(Texture& obj, const Image& image, TextureUnit unit = 0) {
+        updateTexture(obj.texture.get(), image.width, image.height, image.data.get(), unit);
+        obj.size = {{ image.width, image.height }};
+    }
+
     // Creates an empty texture with the specified dimensions.
     Texture createTexture(const std::array<uint16_t, 2>& size, TextureUnit unit = 0) {
         return { size, createTexture(size[0], size[1], nullptr, unit) };
@@ -141,6 +147,7 @@ private:
     UniqueBuffer createVertexBuffer(const void* data, std::size_t size);
     UniqueBuffer createIndexBuffer(const void* data, std::size_t size);
     UniqueTexture createTexture(uint16_t width, uint16_t height, const void* data, TextureUnit);
+    void updateTexture(TextureID, uint16_t width, uint16_t height, const void* data, TextureUnit);
     UniqueFramebuffer createFramebuffer();
     UniqueRenderbuffer createRenderbuffer(RenderbufferType, uint16_t width, uint16_t height);
     void bindAttribute(const AttributeBinding&, std::size_t stride, const int8_t* offset);

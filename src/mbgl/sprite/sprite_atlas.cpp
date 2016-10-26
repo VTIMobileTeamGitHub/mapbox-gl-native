@@ -1,7 +1,6 @@
 #include <mbgl/sprite/sprite_atlas.hpp>
 #include <mbgl/sprite/sprite_atlas_observer.hpp>
 #include <mbgl/sprite/sprite_parser.hpp>
-#include <mbgl/gl/gl.hpp>
 #include <mbgl/gl/context.hpp>
 #include <mbgl/platform/log.hpp>
 #include <mbgl/platform/platform.hpp>
@@ -31,8 +30,6 @@ struct SpriteAtlas::Loader {
 SpriteAtlas::SpriteAtlas(dimension width_, dimension height_, float pixelRatio_)
     : width(width_),
       height(height_),
-      pixelWidth(std::ceil(width * pixelRatio_)),
-      pixelHeight(std::ceil(height * pixelRatio_)),
       pixelRatio(pixelRatio_),
       observer(&nullObserver),
       bin(width_, height_),
@@ -264,20 +261,23 @@ void copyBitmap(const uint32_t *src, const uint32_t srcStride, const uint32_t sr
 }
 
 void SpriteAtlas::copy(const Holder& holder, const SpritePatternMode mode) {
-    if (!data) {
-        data = std::make_unique<uint32_t[]>(pixelWidth * pixelHeight);
-        std::fill(data.get(), data.get() + pixelWidth * pixelHeight, 0);
+    if (!image) {
+        image = { static_cast<uint16_t>(std::ceil(width * pixelRatio)),
+                  static_cast<uint16_t>(std::ceil(height * pixelRatio)) };
+        std::fill(image.data.get(), image.data.get() + image.size(), 0);
     }
 
-    const uint32_t *srcData = reinterpret_cast<const uint32_t *>(holder.spriteImage->image.data.get());
+    const uint32_t* srcData =
+        reinterpret_cast<const uint32_t*>(holder.spriteImage->image.data.get());
     if (!srcData) return;
-    uint32_t *const dstData = data.get();
+    uint32_t* const dstData = reinterpret_cast<uint32_t*>(image.data.get());
 
     const int padding = 1;
 
-    copyBitmap(srcData, uint32_t(holder.spriteImage->image.width), 0, 0,
-            dstData, pixelWidth, (holder.pos.x + padding) * pixelRatio, (holder.pos.y + padding) * pixelRatio, pixelWidth * pixelHeight,
-            uint32_t(holder.spriteImage->image.width), uint32_t(holder.spriteImage->image.height), mode);
+    copyBitmap(srcData, uint32_t(holder.spriteImage->image.width), 0, 0, dstData, image.width,
+               (holder.pos.x + padding) * pixelRatio, (holder.pos.y + padding) * pixelRatio,
+               image.width * image.height, uint32_t(holder.spriteImage->image.width),
+               uint32_t(holder.spriteImage->image.height), mode);
 
     dirtyFlag = true;
 }
@@ -317,73 +317,34 @@ void SpriteAtlas::updateDirty() {
 }
 
 void SpriteAtlas::bind(bool linear, gl::Context& context, gl::TextureUnit unit) {
-    if (!data) {
+    if (!image) {
         return; // Empty atlas
     }
 
-    if (!texture) {
-        texture = context.createTexture();
-        context.activeTexture = unit;
-        context.texture[unit] = *texture;
 #if not MBGL_USE_GLES2
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0));
-#endif // MBGL_USE_GLES2
-        // We are using clamp to edge here since OpenGL ES doesn't allow GL_REPEAT on NPOT textures.
-        // We use those when the pixelRatio isn't a power of two, e.g. on iPhone 6 Plus.
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        fullUploadRequired = true;
-    } else if (context.texture[unit] != *texture) {
-        context.activeTexture = unit;
-        context.texture[unit] = *texture;
-    }
+//    const bool wasDirty = dirtyFlag;
+#endif
 
-    GLuint filter_val = linear ? GL_LINEAR : GL_NEAREST;
-    if (filter_val != filter) {
-        context.activeTexture = unit;
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter_val));
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter_val));
-        filter = filter_val;
+    if (!texture) {
+        texture = context.createTexture(image, unit);
+        dirtyFlag = false;
     }
 
     if (dirtyFlag) {
-        std::lock_guard<std::recursive_mutex> lock(mtx);
-
-        context.activeTexture = unit;
-        if (fullUploadRequired) {
-            MBGL_CHECK_ERROR(glTexImage2D(
-                GL_TEXTURE_2D, // GLenum target
-                0, // GLint level
-                GL_RGBA, // GLint internalformat
-                pixelWidth, // GLsizei width
-                pixelHeight, // GLsizei height
-                0, // GLint border
-                GL_RGBA, // GLenum format
-                GL_UNSIGNED_BYTE, // GLenum type
-                data.get() // const GLvoid * data
-            ));
-            fullUploadRequired = false;
-        } else {
-            MBGL_CHECK_ERROR(glTexSubImage2D(
-                GL_TEXTURE_2D, // GLenum target
-                0, // GLint level
-                0, // GLint xoffset
-                0, // GLint yoffset
-                pixelWidth, // GLsizei width
-                pixelHeight, // GLsizei height
-                GL_RGBA, // GLenum format
-                GL_UNSIGNED_BYTE, // GLenum type
-                data.get() // const GLvoid *pixels
-            ));
-        }
-
+        context.updateTexture(*texture, image, unit);
         dirtyFlag = false;
+    }
+
+    context.bindTexture(*texture, unit,
+                        linear ? gl::TextureFilter::Linear : gl::TextureFilter::Nearest);
 
 #if not MBGL_USE_GLES2
-        // platform::showColorDebugImage("Sprite Atlas", reinterpret_cast<const char*>(data.get()),
-        //                               pixelWidth, pixelHeight, pixelWidth, pixelHeight);
+//    if (wasDirty) {
+//        platform::showColorDebugImage("Sprite Atlas",
+//                                      reinterpret_cast<const char*>(image.data.get()), image.width,
+//                                      image.height, image.width, image.height);
+//    }
 #endif // MBGL_USE_GLES2
-    }
 }
 
 SpriteAtlas::Holder::Holder(std::shared_ptr<const SpriteImage> spriteImage_, Rect<dimension> pos_)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <mbgl/geometry/binpack.hpp>
-#include <mbgl/gl/object.hpp>
+#include <mbgl/gl/texture.hpp>
 #include <mbgl/util/noncopyable.hpp>
 #include <mbgl/util/optional.hpp>
 #include <mbgl/sprite/sprite_image.hpp>
@@ -93,19 +93,18 @@ public:
 
     dimension getWidth() const { return width; }
     dimension getHeight() const { return height; }
-    dimension getTextureWidth() const { return pixelWidth; }
-    dimension getTextureHeight() const { return pixelHeight; }
     float getPixelRatio() const { return pixelRatio; }
 
     // Only for use in tests.
-    const uint32_t* getData() const { return data.get(); }
+    const PremultipliedImage& getAtlasImage() const {
+        return image;
+    }
 
 private:
     void _setSprite(const std::string&, const std::shared_ptr<const SpriteImage>& = nullptr);
     void emitSpriteLoadedIfComplete();
 
     const uint16_t width, height;
-    const dimension pixelWidth, pixelHeight;
     const float pixelRatio;
 
     struct Loader;
@@ -140,11 +139,9 @@ private:
     BinPack<dimension> bin;
     std::map<Key, Holder> images;
     std::unordered_set<std::string> uninitialized;
-    std::unique_ptr<uint32_t[]> data;
+    PremultipliedImage image;
+    mbgl::optional<gl::Texture> texture;
     std::atomic<bool> dirtyFlag;
-    bool fullUploadRequired = true;
-    mbgl::optional<gl::UniqueTexture> texture;
-    uint32_t filter = 0;
     static const int buffer = 1;
 };
 

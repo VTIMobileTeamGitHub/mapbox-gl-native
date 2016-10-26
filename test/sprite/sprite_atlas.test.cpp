@@ -21,14 +21,6 @@ auto readImage(const std::string& name) {
     return decodeImage(util::read_file(name));
 }
 
-auto imageFromAtlas(const SpriteAtlas& atlas) {
-    const size_t bytes = atlas.getTextureWidth() * atlas.getTextureHeight() * 4;
-    auto data = std::make_unique<uint8_t[]>(bytes);
-    const auto src = reinterpret_cast<const uint8_t*>(atlas.getData());
-    std::copy(src, src + bytes, data.get());
-    return PremultipliedImage{ atlas.getTextureWidth(), atlas.getTextureHeight(), std::move(data) };
-}
-
 } // namespace
 
 TEST(SpriteAtlas, Basic) {
@@ -43,11 +35,9 @@ TEST(SpriteAtlas, Basic) {
     EXPECT_EQ(1.0f, atlas.getPixelRatio());
     EXPECT_EQ(63, atlas.getWidth());
     EXPECT_EQ(112, atlas.getHeight());
-    EXPECT_EQ(63, atlas.getTextureWidth());
-    EXPECT_EQ(112, atlas.getTextureHeight());
 
     // Image hasn't been created yet.
-    EXPECT_FALSE(atlas.getData());
+    EXPECT_FALSE(atlas.getAtlasImage());
 
     auto metro = *atlas.getImage("metro", SpritePatternMode::Single);
     EXPECT_EQ(0, metro.pos.x);
@@ -60,7 +50,10 @@ TEST(SpriteAtlas, Basic) {
     EXPECT_EQ(18u, metro.spriteImage->image.height);
     EXPECT_EQ(1.0f, metro.spriteImage->pixelRatio);
 
-    EXPECT_TRUE(atlas.getData());
+    // Now the image was created lazily.
+    EXPECT_TRUE(atlas.getAtlasImage());
+    EXPECT_EQ(63, atlas.getAtlasImage().width);
+    EXPECT_EQ(112, atlas.getAtlasImage().height);
 
     auto pos = *atlas.getPosition("metro", SpritePatternMode::Single);
     EXPECT_DOUBLE_EQ(18, pos.size[0]);
@@ -87,7 +80,7 @@ TEST(SpriteAtlas, Basic) {
     EXPECT_EQ(20, metro2.pos.w);
     EXPECT_EQ(20, metro2.pos.h);
 
-    EXPECT_EQ(readImage("test/fixtures/annotations/result-spriteatlas.png"), imageFromAtlas(atlas));
+    EXPECT_EQ(readImage("test/fixtures/annotations/result-spriteatlas.png"), atlas.getAtlasImage());
 }
 
 TEST(SpriteAtlas, Size) {
@@ -100,8 +93,9 @@ TEST(SpriteAtlas, Size) {
     EXPECT_DOUBLE_EQ(1.4f, atlas.getPixelRatio());
     EXPECT_EQ(63, atlas.getWidth());
     EXPECT_EQ(112, atlas.getHeight());
-    EXPECT_EQ(89, atlas.getTextureWidth());
-    EXPECT_EQ(157, atlas.getTextureHeight());
+
+    // Image hasn't been created yet.
+    EXPECT_FALSE(atlas.getAtlasImage());
 
     auto metro = *atlas.getImage("metro", SpritePatternMode::Single);
     EXPECT_EQ(0, metro.pos.x);
@@ -114,8 +108,13 @@ TEST(SpriteAtlas, Size) {
     EXPECT_EQ(18u, metro.spriteImage->image.height);
     EXPECT_EQ(1.0f, metro.spriteImage->pixelRatio);
 
+    // Now the image was created lazily.
+    EXPECT_TRUE(atlas.getAtlasImage());
+    EXPECT_EQ(89, atlas.getAtlasImage().width);
+    EXPECT_EQ(157, atlas.getAtlasImage().height);
+
     EXPECT_EQ(readImage("test/fixtures/annotations/result-spriteatlassize.png"),
-              imageFromAtlas(atlas));
+              atlas.getAtlasImage());
 }
 
 TEST(SpriteAtlas, Updates) {
@@ -124,8 +123,9 @@ TEST(SpriteAtlas, Updates) {
     EXPECT_EQ(1.0f, atlas.getPixelRatio());
     EXPECT_EQ(32, atlas.getWidth());
     EXPECT_EQ(32, atlas.getHeight());
-    EXPECT_EQ(32, atlas.getTextureWidth());
-    EXPECT_EQ(32, atlas.getTextureHeight());
+
+    // Image hasn't been created yet.
+    EXPECT_FALSE(atlas.getAtlasImage());
 
     atlas.setSprite("one", std::make_shared<SpriteImage>(PremultipliedImage(16, 12), 1));
     auto one = *atlas.getImage("one", SpritePatternMode::Single);
@@ -139,8 +139,13 @@ TEST(SpriteAtlas, Updates) {
     EXPECT_EQ(12u, one.spriteImage->image.height);
     EXPECT_EQ(1.0f, one.spriteImage->pixelRatio);
 
+    // Now the image was created lazily.
+    EXPECT_TRUE(atlas.getAtlasImage());
+    EXPECT_EQ(32, atlas.getAtlasImage().width);
+    EXPECT_EQ(32, atlas.getAtlasImage().height);
+
     EXPECT_EQ(readImage("test/fixtures/annotations/result-spriteatlas-empty.png"),
-              imageFromAtlas(atlas));
+              atlas.getAtlasImage());
 
     // Update sprite
     PremultipliedImage image2(16, 12);
@@ -153,13 +158,13 @@ TEST(SpriteAtlas, Updates) {
 
     // Atlas texture hasn't changed yet.
     EXPECT_EQ(readImage("test/fixtures/annotations/result-spriteatlas-empty.png"),
-              imageFromAtlas(atlas));
+              atlas.getAtlasImage());
 
     atlas.updateDirty();
 
     // Now the atlas texture has changed.
     EXPECT_EQ(readImage("test/fixtures/annotations/result-spriteatlas-updated.png"),
-              imageFromAtlas(atlas));
+              atlas.getAtlasImage());
 }
 
 TEST(SpriteAtlas, AddRemove) {

@@ -49,6 +49,10 @@ public:
     size_t stride() const { return static_cast<size_t>(width) * 4; }
     size_t size() const { return static_cast<size_t>(width) * height * 4; }
 
+    operator bool() const {
+        return width > 0 && height > 0 && data.get() != nullptr;
+    }
+
     uint16_t width = 0;
     uint16_t height = 0;
     std::unique_ptr<uint8_t[]> data;
