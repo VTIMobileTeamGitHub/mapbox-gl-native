@@ -914,10 +914,29 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
 
 - (void)styleCountryLabelLanguage
 {
+    NSString *bestLanguageForUser = [NSString stringWithFormat:@"{name_%@}", [self bestLanguageForUser]];
     MGLSymbolStyleLayer *countryLayer = (MGLSymbolStyleLayer *)[self.mapView.style layerWithIdentifier:@"country-label-lg"];
     MGLStyleConstantValue<NSString *> *countryLabel = (MGLStyleConstantValue<NSString *> *)countryLayer.textField;
-    NSString *language = [countryLabel.rawValue isEqual:@"{name_zh}"] ? @"{name_en}" : @"{name_zh}";
+    NSString *language = [countryLabel.rawValue isEqual:bestLanguageForUser] ? @"{name}" : bestLanguageForUser;
     countryLayer.textField = [MGLStyleValue<NSString *> valueWithRawValue:language];
+}
+
+- (NSString *)bestLanguageForUser
+{
+    NSArray *supportedLanguages = @[ @"en", @"es", @"fr", @"de", @"ru", @"zh" ];
+    NSArray<NSString *> *preferredLanguages = [NSLocale preferredLanguages];
+    NSString *bestLanguage;
+
+    for (NSString *language in preferredLanguages) {
+        NSString *thisLanguage = [language substringToIndex:2];
+        if ([supportedLanguages containsObject:thisLanguage])
+        {
+            bestLanguage = thisLanguage;
+            break;
+        }
+    }
+
+    return bestLanguage ?: @"en";
 }
 
 - (IBAction)startWorldTour
