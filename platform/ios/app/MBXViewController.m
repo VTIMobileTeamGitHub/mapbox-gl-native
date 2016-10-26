@@ -100,6 +100,7 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
 @property (nonatomic) NSInteger styleIndex;
 @property (nonatomic) BOOL debugLoggingEnabled;
 @property (nonatomic) BOOL customUserLocationAnnnotationEnabled;
+@property (nonatomic) BOOL usingLocaleBasedCountryLabels;
 
 @end
 
@@ -311,7 +312,7 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
                 @"Style Query For GeoJSON",
                 @"Style Feature",
                 @"Style Dynamic Point Collection",
-                @"Style Country Label Language"
+                [NSString stringWithFormat:@"Label Countries in %@", (_usingLocaleBasedCountryLabels ? @"Local Language" : [[NSLocale currentLocale] displayNameForKey:NSLocaleIdentifier value:[self bestLanguageForUser]])],
             ]];
             break;
         case MBXSettingsMiscellaneous:
@@ -916,8 +917,11 @@ typedef NS_ENUM(NSInteger, MBXSettingsMiscellaneousRows) {
 {
     NSString *bestLanguageForUser = [NSString stringWithFormat:@"{name_%@}", [self bestLanguageForUser]];
     MGLSymbolStyleLayer *countryLayer = (MGLSymbolStyleLayer *)[self.mapView.style layerWithIdentifier:@"country-label-lg"];
+
     MGLStyleConstantValue<NSString *> *countryLabel = (MGLStyleConstantValue<NSString *> *)countryLayer.textField;
-    NSString *language = [countryLabel.rawValue isEqual:bestLanguageForUser] ? @"{name}" : bestLanguageForUser;
+    _usingLocaleBasedCountryLabels = ![countryLabel.rawValue isEqual:bestLanguageForUser];
+    NSString *language = _usingLocaleBasedCountryLabels ? bestLanguageForUser : @"{name}";
+
     countryLayer.textField = [MGLStyleValue<NSString *> valueWithRawValue:language];
 }
 
