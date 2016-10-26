@@ -99,7 +99,7 @@ public:
 };
 
 Map::Map(Backend& backend,
-         const std::array<uint16_t, 2> size,
+         const Size size,
          const float pixelRatio,
          FileSource& fileSource,
          Scheduler& scheduler,
@@ -617,16 +617,16 @@ double Map::getMaxZoom() const {
 
 #pragma mark - Size
 
-void Map::setSize(const std::array<uint16_t, 2>& size) {
+void Map::setSize(const Size size) {
     impl->transform.resize(size);
     impl->onUpdate(Update::Repaint);
 }
 
-uint16_t Map::getWidth() const {
+uint32_t Map::getWidth() const {
     return impl->transform.getState().getWidth();
 }
 
-uint16_t Map::getHeight() const {
+uint32_t Map::getHeight() const {
     return impl->transform.getState().getHeight();
 }
 

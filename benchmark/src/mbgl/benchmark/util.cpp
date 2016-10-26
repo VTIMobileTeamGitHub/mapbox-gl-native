@@ -15,7 +15,7 @@ void render(Map& map, OffscreenView& view) {
         result = view.readStillImage();
     });
 
-    while (!result.size()) {
+    while (!result) {
         util::RunLoop::Get()->runOnce();
     }
 }

@@ -177,8 +177,8 @@ struct Viewport {
     struct Type {
         int32_t x;
         int32_t y;
-        uint16_t width;
-        uint16_t height;
+        uint32_t width;
+        uint32_t height;
     };
     static const constexpr Type Default = { 0, 0, 0, 0 };
     static void Set(const Type&);

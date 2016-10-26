@@ -399,8 +399,8 @@ public:
     [[NSFileManager defaultManager] removeItemAtPath:fileCachePath error:NULL];
 
     // setup mbgl map
-    const std::array<uint16_t, 2> size = {{ static_cast<uint16_t>(self.bounds.size.width),
-                                            static_cast<uint16_t>(self.bounds.size.height) }};
+    const mbgl::Size size{ static_cast<uint32_t>(self.bounds.size.width),
+                           static_cast<uint32_t>(self.bounds.size.height) };
     mbgl::DefaultFileSource *mbglFileSource = [MGLOfflineStorage sharedOfflineStorage].mbglFileSource;
     const float scaleFactor = [UIScreen instancesRespondToSelector:@selector(nativeScale)] ? [[UIScreen mainScreen] nativeScale] : [[UIScreen mainScreen] scale];
     _mbglThreadPool = new mbgl::ThreadPool(4);
@@ -885,10 +885,9 @@ public:
 
     [self adjustContentInset];
 
-    if ( ! _isTargetingInterfaceBuilder)
-    {
-        _mbglMap->setSize({{ static_cast<uint16_t>(self.bounds.size.width),
-                             static_cast<uint16_t>(self.bounds.size.height) }});
+    if (!_isTargetingInterfaceBuilder) {
+        _mbglMap->setSize({ static_cast<uint32_t>(self.bounds.size.width),
+                            static_cast<uint32_t>(self.bounds.size.height) });
     }
 
     if (self.attributionSheet.visible)

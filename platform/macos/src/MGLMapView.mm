@@ -266,8 +266,8 @@ public:
 
     mbgl::DefaultFileSource* mbglFileSource = [MGLOfflineStorage sharedOfflineStorage].mbglFileSource;
 
-    const std::array<uint16_t, 2> size = {{ static_cast<uint16_t>(self.bounds.size.width),
-                                            static_cast<uint16_t>(self.bounds.size.height) }};
+    const mbgl::Size size { static_cast<uint32_t>(self.bounds.size.width),
+                            static_cast<uint32_t>(self.bounds.size.height) };
     _mbglThreadPool = new mbgl::ThreadPool(4);
     _mbglMap = new mbgl::Map(*_mbglView, size, [NSScreen mainScreen].backingScaleFactor, *mbglFileSource, *_mbglThreadPool, mbgl::MapMode::Continuous, mbgl::GLContextMode::Unique, mbgl::ConstrainMode::None, mbgl::ViewportMode::Default);
     [self validateTileCacheSize];
@@ -639,8 +639,8 @@ public:
         [self validateTileCacheSize];
     }
     if (!_isTargetingInterfaceBuilder) {
-        _mbglMap->setSize({{ static_cast<uint16_t>(self.bounds.size.width),
-                             static_cast<uint16_t>(self.bounds.size.height) }});
+        _mbglMap->setSize({ static_cast<uint32_t>(self.bounds.size.width),
+                            static_cast<uint32_t>(self.bounds.size.height) });
     }
 }
 
@@ -2578,9 +2578,9 @@ public:
 
     mbgl::PremultipliedImage readStillImage() {
         NSRect bounds = [nativeView convertRectToBacking:nativeView.bounds];
-        const uint16_t width = bounds.size.width;
-        const uint16_t height = bounds.size.height;
-        mbgl::PremultipliedImage image{ width, height };
+        const uint32_t width = bounds.size.width;
+        const uint32_t height = bounds.size.height;
+        mbgl::PremultipliedImage image({ width, height });
         MBGL_CHECK_ERROR(
             glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, image.data.get()));
 
