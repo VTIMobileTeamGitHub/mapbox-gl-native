@@ -65,19 +65,23 @@ public:
     // Create a texture from an image with data.
     template <typename Image>
     Texture createTexture(const Image& image, TextureUnit unit = 0) {
+        auto format = image.channels == 4 ? TextureFormat::RGBA : TextureFormat::Alpha;
         return { {{ image.width, image.height }},
-                 createTexture(image.width, image.height, image.data.get(), unit) };
+                 createTexture(image.width, image.height, image.data.get(), format, unit) };
     }
 
     template <typename Image>
     void updateTexture(Texture& obj, const Image& image, TextureUnit unit = 0) {
-        updateTexture(obj.texture.get(), image.width, image.height, image.data.get(), unit);
+        auto format = image.channels == 4 ? TextureFormat::RGBA : TextureFormat::Alpha;
+        updateTexture(obj.texture.get(), image.width, image.height, image.data.get(), format, unit);
         obj.size = {{ image.width, image.height }};
     }
 
     // Creates an empty texture with the specified dimensions.
-    Texture createTexture(const std::array<uint16_t, 2>& size, TextureUnit unit = 0) {
-        return { size, createTexture(size[0], size[1], nullptr, unit) };
+    Texture createTexture(const std::array<uint16_t, 2>& size,
+                          TextureFormat format = TextureFormat::RGBA,
+                          TextureUnit unit = 0) {
+        return { size, createTexture(size[0], size[1], nullptr, format, unit) };
     }
 
     void bindTexture(Texture&,
@@ -146,8 +150,8 @@ public:
 private:
     UniqueBuffer createVertexBuffer(const void* data, std::size_t size);
     UniqueBuffer createIndexBuffer(const void* data, std::size_t size);
-    UniqueTexture createTexture(uint16_t width, uint16_t height, const void* data, TextureUnit);
-    void updateTexture(TextureID, uint16_t width, uint16_t height, const void* data, TextureUnit);
+    UniqueTexture createTexture(uint16_t width, uint16_t height, const void* data, TextureFormat, TextureUnit);
+    void updateTexture(TextureID, uint16_t width, uint16_t height, const void* data, TextureFormat, TextureUnit);
     UniqueFramebuffer createFramebuffer();
     UniqueRenderbuffer createRenderbuffer(RenderbufferType, uint16_t width, uint16_t height);
     void bindAttribute(const AttributeBinding&, std::size_t stride, const int8_t* offset);

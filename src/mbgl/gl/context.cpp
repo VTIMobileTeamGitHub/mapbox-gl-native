@@ -18,6 +18,10 @@ static_assert(std::is_same<RenderbufferID, GLuint>::value, "OpenGL type mismatch
 static_assert(std::is_same<StencilValue, GLint>::value, "OpenGL type mismatch");
 static_assert(std::is_same<StencilMaskValue, GLuint>::value, "OpenGL type mismatch");
 
+static_assert(std::is_same<std::underlying_type_t<TextureFormat>, GLenum>::value, "OpenGL type mismatch");
+static_assert(underlying_type(TextureFormat::RGBA) == GL_RGBA, "OpenGL enum mismatch");
+static_assert(underlying_type(TextureFormat::Alpha) == GL_ALPHA, "OpenGL enum mismatch");
+
 static_assert(underlying_type(StencilTestFunction::Never) == GL_NEVER, "OpenGL enum mismatch");
 static_assert(underlying_type(StencilTestFunction::Less) == GL_LESS, "OpenGL enum mismatch");
 static_assert(underlying_type(StencilTestFunction::Equal) == GL_EQUAL, "OpenGL enum mismatch");
@@ -250,10 +254,10 @@ Framebuffer Context::createFramebuffer(const Texture& color) {
     return { color.size, std::move(fbo) };
 }
 
-UniqueTexture
-Context::createTexture(uint16_t width, uint16_t height, const void* data, TextureUnit unit) {
+UniqueTexture Context::createTexture(
+    uint16_t width, uint16_t height, const void* data, TextureFormat format, TextureUnit unit) {
     auto obj = createTexture();
-    updateTexture(obj, width, height, data, unit);
+    updateTexture(obj, width, height, data, format, unit);
     // We are using clamp to edge here since OpenGL ES doesn't allow GL_REPEAT on NPOT textures.
     // We use those when the pixelRatio isn't a power of two, e.g. on iPhone 6 Plus.
     MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
@@ -263,11 +267,16 @@ Context::createTexture(uint16_t width, uint16_t height, const void* data, Textur
     return obj;
 }
 
-void Context::updateTexture(TextureID id, uint16_t width, uint16_t height, const void* data, TextureUnit unit) {
+void Context::updateTexture(TextureID id,
+                            uint16_t width,
+                            uint16_t height,
+                            const void* data,
+                            TextureFormat format,
+                            TextureUnit unit) {
     activeTexture = unit;
     texture[unit] = id;
-    MBGL_CHECK_ERROR(
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data));
+    MBGL_CHECK_ERROR(glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLenum>(format), width, height, 0,
+                                  static_cast<GLenum>(format), GL_UNSIGNED_BYTE, data));
 }
 
 void Context::bindTexture(Texture& obj,
