@@ -8,6 +8,8 @@
 #include <mbgl/util/font_stack.hpp>
 #include <mbgl/util/exclusive.hpp>
 #include <mbgl/util/work_queue.hpp>
+#include <mbgl/util/image.hpp>
+#include <mbgl/gl/texture.hpp>
 #include <mbgl/gl/object.hpp>
 
 #include <atomic>
@@ -100,9 +102,9 @@ private:
     std::mutex mtx;
     BinPack<uint16_t> bin;
     std::unordered_map<FontStack, std::map<uint32_t, GlyphValue>, FontStackHash> index;
-    const std::unique_ptr<uint8_t[]> data;
-    std::atomic<bool> dirty;
-    mbgl::optional<gl::UniqueTexture> texture;
+    const AlphaImage image;
+    std::atomic<bool> dirtyFlag;
+    mbgl::optional<gl::Texture> texture;
 };
 
 } // namespace mbgl
