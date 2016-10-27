@@ -1,6 +1,8 @@
 #pragma once
 
+#include <mbgl/gl/texture.hpp>
 #include <mbgl/gl/object.hpp>
+#include <mbgl/util/image.hpp>
 #include <mbgl/util/optional.hpp>
 
 #include <vector>
@@ -43,9 +45,9 @@ public:
     const uint16_t height;
 
 private:
-    const std::unique_ptr<char[]> data;
+    const AlphaImage image;
     bool dirty;
-    mbgl::optional<gl::UniqueTexture> texture;
+    mbgl::optional<gl::Texture> texture;
     int nextRow = 0;
     std::unordered_map<size_t, LinePatternPos> positions;
 };

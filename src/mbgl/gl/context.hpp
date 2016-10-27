@@ -87,7 +87,9 @@ public:
     void bindTexture(Texture&,
                      TextureUnit = 0,
                      TextureFilter = TextureFilter::Nearest,
-                     TextureMipMap = TextureMipMap::No);
+                     TextureMipMap = TextureMipMap::No,
+                     TextureWrap wrapX = TextureWrap::Clamp,
+                     TextureWrap wrapY = TextureWrap::Clamp);
 
     template <class Shader, class Vertex>
     void bindAttributes(const Shader& shader, const VertexBuffer<Vertex>&, const int8_t* offset) {

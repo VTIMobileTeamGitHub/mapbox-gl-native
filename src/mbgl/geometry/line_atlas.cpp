@@ -14,7 +14,7 @@ namespace mbgl {
 LineAtlas::LineAtlas(uint16_t w, uint16_t h)
     : width(w),
       height(h),
-      data(std::make_unique<char[]>(w * h)),
+      image(width, height),
       dirty(true) {
 }
 
@@ -104,7 +104,7 @@ LinePatternPos LineAtlas::addDash(const std::vector<float>& dasharray, LinePatte
                 signedDistance = int((inside ? 1 : -1) * dist);
             }
 
-            data[index + x] = fmax(0, fmin(255, signedDistance + offset));
+            image.data[index + x] = fmax(0, fmin(255, signedDistance + offset));
         }
     }
 
@@ -127,52 +127,18 @@ void LineAtlas::upload(gl::Context& context, gl::TextureUnit unit) {
 }
 
 void LineAtlas::bind(gl::Context& context, gl::TextureUnit unit) {
-    bool first = false;
     if (!texture) {
-        texture = context.createTexture();
-        context.activeTexture = unit;
-        context.texture[unit] = *texture;
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT));
-        MBGL_CHECK_ERROR(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        first = true;
-    } else if (context.texture[unit] != *texture) {
-        context.activeTexture = unit;
-        context.texture[unit] = *texture;
+        texture = context.createTexture(image, unit);
+        dirty = false;
     }
 
     if (dirty) {
-        context.activeTexture = unit;
-        if (first) {
-            MBGL_CHECK_ERROR(glTexImage2D(
-                GL_TEXTURE_2D, // GLenum target
-                0, // GLint level
-                GL_ALPHA, // GLint internalformat
-                width, // GLsizei width
-                height, // GLsizei height
-                0, // GLint border
-                GL_ALPHA, // GLenum format
-                GL_UNSIGNED_BYTE, // GLenum type
-                data.get() // const GLvoid * data
-            ));
-        } else {
-            MBGL_CHECK_ERROR(glTexSubImage2D(
-                GL_TEXTURE_2D, // GLenum target
-                0, // GLint level
-                0, // GLint xoffset
-                0, // GLint yoffset
-                width, // GLsizei width
-                height, // GLsizei height
-                GL_ALPHA, // GLenum format
-                GL_UNSIGNED_BYTE, // GLenum type
-                data.get() // const GLvoid *pixels
-            ));
-        }
-
-
+        context.updateTexture(*texture, image, unit);
         dirty = false;
     }
+
+    context.bindTexture(*texture, unit, gl::TextureFilter::Linear, gl::TextureMipMap::No,
+                        gl::TextureWrap::Repeat, gl::TextureWrap::Clamp);
 }
 
 } // namespace mbgl
